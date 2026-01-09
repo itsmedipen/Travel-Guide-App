@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,16 +8,9 @@
     <!-- Load Config -->
     <script src="config.js"></script>
     <script>
-        function loadGoogleMaps() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-        window.addEventListener('load', loadGoogleMaps);
+        // API loading logic moved to bottom of body with callback
     </script>
-    
+
     <style>
         /* CSS Variables - Exactly the same as your main page for consistency */
         :root {
@@ -75,7 +69,7 @@
             text-decoration: none;
             border-radius: 10px;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .theme-toggle {
@@ -98,12 +92,12 @@
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .destination-tag {
             display: inline-block;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
             padding: 10px 25px;
             border-radius: 25px;
             color: white;
@@ -116,7 +110,7 @@
             border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
 
         .section h2 {
@@ -137,13 +131,17 @@
             background: var(--info-card-bg);
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
         }
 
-        .place-card:hover { transform: translateY(-5px); }
+        .place-card:hover {
+            transform: translateY(-5px);
+        }
 
-        .place-info { padding: 20px; }
+        .place-info {
+            padding: 20px;
+        }
 
         .place-name {
             font-size: 1.2em;
@@ -166,16 +164,35 @@
             font-weight: 600;
         }
 
-        .open { background: #e8f5e9; color: #2e7d32; }
-        .closed { background: #ffebee; color: #c62828; }
-        
-        /* Adjusting colors for dark mode status badges */
-        body.dark-mode .open { background: #1b3a20; color: #81c784; }
-        body.dark-mode .closed { background: #3d1b1b; color: #e57373; }
+        .open {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
 
-        .loading { text-align: center; padding: 40px; color: white; }
+        .closed {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Adjusting colors for dark mode status badges */
+        body.dark-mode .open {
+            background: #1b3a20;
+            color: #81c784;
+        }
+
+        body.dark-mode .closed {
+            background: #3d1b1b;
+            color: #e57373;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
         .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
+            border: 4px solid rgba(255, 255, 255, 0.3);
             border-top: 4px solid white;
             border-radius: 50%;
             width: 50px;
@@ -184,21 +201,36 @@
             margin: 0 auto 20px;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
 
         @media (max-width: 768px) {
-            .nav-bar { flex-direction: column; gap: 15px; }
-            .places-grid { grid-template-columns: 1fr; }
+            .nav-bar {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .places-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="nav-bar">
-            <a href="tourist_destination_explorer.html" class="back-btn">← Back to Explorer</a>
+            <a href="index.html" class="back-btn">← Back to Explorer</a>
             <button class="theme-toggle" id="themeToggle">🌙 Night Mode</button>
         </div>
-        
+
         <div class="header">
             <h1>🏨 Hotels & Restaurants</h1>
             <div class="destination-tag" id="destinationTag">Loading...</div>
@@ -269,10 +301,10 @@
             const photoUrl = place.photos && place.photos.length > 0
                 ? place.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 })
                 : 'https://via.placeholder.com/400x300?text=No+Image';
-            
+
             const rating = place.rating ? `⭐ ${place.rating} (${place.user_ratings_total || 0})` : '⭐ No rating';
             const isOpen = place.opening_hours && place.opening_hours.isOpen ? place.opening_hours.isOpen() : null;
-            
+
             const statusBadge = isOpen !== null
                 ? `<span class="place-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Open Now' : 'Closed'}</span>`
                 : '';
@@ -312,9 +344,34 @@
             }
         }
 
-        if (destination) {
-            window.onload = loadPlaces;
+
+        // Define initMap globally so the API callback can find it
+        window.initMap = function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('destination')) {
+                loadPlaces();
+            }
+        };
+
+        function loadGoogleMaps() {
+            // Check if script is already loaded
+            if (document.querySelector('script[src*="maps.googleapis.com"]')) return;
+
+            const script = document.createElement('script');
+            // Add callback=initMap to the URL
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap`;
+            script.async = true;
+            script.defer = true;
+            script.onerror = function () {
+                console.error("Error loading Google Maps API");
+                document.getElementById('loading').innerHTML = '<p>Error loading maps service. Please try again.</p>';
+            };
+            document.head.appendChild(script);
         }
+
+        // Start loading the API immediately
+        loadGoogleMaps();
     </script>
 </body>
+
 </html>
