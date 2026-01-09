@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotels & Restaurants Explorer</title>
+    <!-- Load Config -->
+    <script src="config.js"></script>
+    <script>
+        function loadGoogleMaps() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+        window.addEventListener('load', loadGoogleMaps);
+    </script>
+    
+    <style>
+        /* CSS Variables - Exactly the same as your main page for consistency */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --info-card-bg: #f8f9ff;
+            --header-text: #ffffff;
+            --border-color: #667eea;
+        }
+
+        body.dark-mode {
+            --bg-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --card-bg: #1e1e26;
+            --text-main: #f0f0f0;
+            --text-muted: #cccccc;
+            --info-card-bg: #2a2a35;
+            --header-text: #ffffff;
+            --border-color: #8e9efc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Nav Header with Back Button and Theme Toggle */
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            padding: 10px 20px;
+            background: var(--card-bg);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-weight: 600;
+        }
+
+        .header {
+            text-align: center;
+            color: var(--header-text);
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .destination-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 25px;
+            border-radius: 25px;
+            color: white;
+            font-size: 1.1em;
+            backdrop-filter: blur(5px);
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid var(--border-color);
+        }
+
+        .places-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .place-card {
+            background: var(--info-card-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .place-card:hover { transform: translateY(-5px); }
+
+        .place-info { padding: 20px; }
+
+        .place-name {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        .place-address {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .place-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .open { background: #e8f5e9; color: #2e7d32; }
+        .closed { background: #ffebee; color: #c62828; }
+        
+        /* Adjusting colors for dark mode status badges */
+        body.dark-mode .open { background: #1b3a20; color: #81c784; }
+        body.dark-mode .closed { background: #3d1b1b; color: #e57373; }
+
+        .loading { text-align: center; padding: 40px; color: white; }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .nav-bar { flex-direction: column; gap: 15px; }
+            .places-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="tourist_destination_explorer.html" class="back-btn">← Back to Explorer</a>
+            <button class="theme-toggle" id="themeToggle">🌙 Night Mode</button>
+        </div>
+        
+        <div class="header">
+            <h1>🏨 Hotels & Restaurants</h1>
+            <div class="destination-tag" id="destinationTag">Loading...</div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Finding the best spots for you...</p>
+        </div>
+
+        <div id="hotelsSection" class="section" style="display: none;">
+            <h2>🏨 Top Hotels</h2>
+            <div id="hotelsList" class="places-grid"></div>
+        </div>
+
+        <div id="restaurantsSection" class="section" style="display: none;">
+            <h2>🍽️ Top Restaurants</h2>
+            <div id="restaurantsList" class="places-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Theme Management ---
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // Apply theme immediately on load
+        if (localStorage.getItem('theme') === 'dark') {
+            body.classList.add('dark-mode');
+            themeToggle.textContent = '☀️ Day Mode';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            themeToggle.textContent = isDark ? '☀️ Day Mode' : '🌙 Night Mode';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // --- Data Loading Logic ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const country = urlParams.get('country');
+        const destination = urlParams.get('destination');
+
+        if (destination) {
+            document.getElementById('destinationTag').textContent = `${destination}, ${country || ''}`;
+        }
+
+        async function getPlaces(location, type) {
+            return new Promise((resolve) => {
+                const service = new google.maps.places.PlacesService(document.createElement('div'));
+                const request = {
+                    query: `${type} near ${location}, ${country || ''}`,
+                    fields: ['name', 'rating', 'formatted_address', 'photos', 'opening_hours', 'user_ratings_total']
+                };
+
+                service.textSearch(request, (results, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK) {
+                        resolve(results.slice(0, 6));
+                    } else {
+                        resolve([]);
+                    }
+                });
+            });
+        }
+
+        function createPlaceCard(place) {
+            const photoUrl = place.photos && place.photos.length > 0
+                ? place.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 })
+                : 'https://via.placeholder.com/400x300?text=No+Image';
+            
+            const rating = place.rating ? `⭐ ${place.rating} (${place.user_ratings_total || 0})` : '⭐ No rating';
+            const isOpen = place.opening_hours && place.opening_hours.isOpen ? place.opening_hours.isOpen() : null;
+            
+            const statusBadge = isOpen !== null
+                ? `<span class="place-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Open Now' : 'Closed'}</span>`
+                : '';
+
+            return `
+                <div class="place-card">
+                    <img src="${photoUrl}" alt="${place.name}" style="width:100%; height:200px; object-fit:cover;">
+                    <div class="place-info">
+                        <div class="place-name">${place.name}</div>
+                        <div style="color: #f39c12; margin-bottom:8px;">${rating}</div>
+                        <div class="place-address">📍 ${place.formatted_address || 'Address hidden'}</div>
+                        ${statusBadge}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadPlaces() {
+            try {
+                const hotels = await getPlaces(destination, 'hotel');
+                const hotelsList = document.getElementById('hotelsList');
+                if (hotels.length > 0) {
+                    hotelsList.innerHTML = hotels.map(h => createPlaceCard(h)).join('');
+                    document.getElementById('hotelsSection').style.display = 'block';
+                }
+
+                const restaurants = await getPlaces(destination, 'restaurant');
+                const restaurantsList = document.getElementById('restaurantsList');
+                if (restaurants.length > 0) {
+                    restaurantsList.innerHTML = restaurants.map(r => createPlaceCard(r)).join('');
+                    document.getElementById('restaurantsSection').style.display = 'block';
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        if (destination) {
+            window.onload = loadPlaces;
+        }
+    </script>
+</body>
+</html>
